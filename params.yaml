@@ -1,6 +1,6 @@
 template-file-path: booksRDS.yml
 parameters:
-  DBPassword: '****'
+  DBPassword: 'KayOne#22'
   DBName: myappdb
   DBUsername: myappuser
 tags: {}
