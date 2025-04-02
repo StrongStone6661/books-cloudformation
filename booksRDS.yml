@@ -114,7 +114,7 @@ Resources:
   RDSInstance:
     Type: AWS::RDS::DBInstance
     Properties:
-      DBInstanceIdentifier: myapp-postgres
+      DBInstanceIdentifier: myapp-postgresql
       Engine: postgres
       EngineVersion: '11.22-rds.20240808'
       DBInstanceClass: db.t3.micro
@@ -221,8 +221,8 @@ Resources:
                     - s3:DeleteObject
                     - s3:ListBucket
                 Resource:
-                    - "arn:aws:s3:::book-viewer-v2"
-                    - "arn:aws:s3:::book-viewer-v2/*"
+                    - "arn:aws:s3:::book-viewer-v20"
+                    - "arn:aws:s3:::book-viewer-v20/*"
   # S3 Access Role
   S3AccessRole:
     Type: AWS::IAM::Role
