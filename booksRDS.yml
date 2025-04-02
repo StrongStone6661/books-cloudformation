@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: CloudFormation template to provision a VPC, publicly accessible RDS PostgreSQL instance with multi-AZ failover, and ECS infrastructure with blue/green deployment in eu-central-1
+Description: CloudFormation template to provision a VPC, privately accessible RDS PostgreSQL instance with multi-AZ failover, and ECS infrastructure with blue/green deployment in eu-central-1
 
 Parameters:
   DBName:
@@ -50,6 +50,29 @@ Resources:
         - Key: Name
           Value: PublicSubnet2
 
+  # Private Subnets for RDS
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.3.0/24
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: eu-central-1a # Explicitly set for eu-central-1
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet1
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.4.0/24
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: eu-central-1b # Explicitly set for eu-central-1
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet2
+
   # Internet Gateway
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -60,7 +83,23 @@ Resources:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
 
-  # Route Table
+  # NAT Gateway for private subnet outbound access
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: NatGateway
+
+  # Public Route Table
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -89,14 +128,42 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRouteTable
 
-  # RDS Subnet Group
+  # Private Route Table
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: PrivateRouteTable
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+  # RDS Subnet Group - now using private subnets
   RDSSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
       DBSubnetGroupDescription: Subnet group for RDS instance
       SubnetIds:
-        - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
 
   # RDS Security Group
   RDSSecurityGroup:
@@ -108,9 +175,9 @@ Resources:
         - IpProtocol: tcp
           FromPort: 5432
           ToPort: 5432
-          CidrIp: 0.0.0.0/0 # Allows access from any IP (restrict in production)
+          SourceSecurityGroupId: !Ref ECSServiceSecurityGroup
 
-  # RDS Instance
+  # RDS Instance - now private
   RDSInstance:
     Type: AWS::RDS::DBInstance
     Properties:
@@ -130,7 +197,7 @@ Resources:
       BackupRetentionPeriod: 7
       PreferredBackupWindow: '03:00-04:00'
       PreferredMaintenanceWindow: 'sun:05:00-sun:06:00'
-      PubliclyAccessible: true
+      PubliclyAccessible: false
 
   # SSM Parameters for RDS
   DBEndpointParameter:
@@ -321,10 +388,6 @@ Resources:
           FromPort: 8080
           ToPort: 8080
           SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
-        - IpProtocol: tcp
-          FromPort: 5432
-          ToPort: 5432
-          SourceSecurityGroupId: !Ref RDSSecurityGroup # Allow ECS to RDS
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
