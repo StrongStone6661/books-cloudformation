@@ -34,7 +34,7 @@ Resources:
       VpcId: !Ref VPC
       CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
-      AvailabilityZone: eu-central-1a # Explicitly set for eu-central-1
+      AvailabilityZone: eu-central-1a 
       Tags:
         - Key: Name
           Value: PublicSubnet1
@@ -45,7 +45,7 @@ Resources:
       VpcId: !Ref VPC
       CidrBlock: 10.0.2.0/24
       MapPublicIpOnLaunch: true
-      AvailabilityZone: eu-central-1b # Explicitly set for eu-central-1
+      AvailabilityZone: eu-central-1b
       Tags:
         - Key: Name
           Value: PublicSubnet2
@@ -57,7 +57,7 @@ Resources:
       VpcId: !Ref VPC
       CidrBlock: 10.0.3.0/24
       MapPublicIpOnLaunch: false
-      AvailabilityZone: eu-central-1a # Explicitly set for eu-central-1
+      AvailabilityZone: eu-central-1a 
       Tags:
         - Key: Name
           Value: PrivateSubnet1
@@ -68,7 +68,7 @@ Resources:
       VpcId: !Ref VPC
       CidrBlock: 10.0.4.0/24
       MapPublicIpOnLaunch: false
-      AvailabilityZone: eu-central-1b # Explicitly set for eu-central-1
+      AvailabilityZone: eu-central-1b 
       Tags:
         - Key: Name
           Value: PrivateSubnet2
