@@ -59,7 +59,7 @@ Resources:
       AvailabilityZone: eu-central-1b
       Tags:
         - Key: Name
-          Value: PublicSubnet2
+          Value: PublicSubnet3
 
   # Private Subnets for RDS
   PrivateSubnet1:
